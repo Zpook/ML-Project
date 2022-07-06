@@ -14,7 +14,7 @@ def main():
         [ttrans.ToTensor(), ttrans.Normalize((0.1307), (0.3081))]
     )
 
-    dataset = torchvision.datasets.MNIST("./dataset/", train=True, download=True, transform=transforms)
+    dataset = torchvision.datasets.MNIST("./dataset/", train=False, download=True, transform=transforms)
     dataLoader = torch.utils.data.DataLoader(
         dataset, batch_size=BATCH, shuffle=True, num_workers=2
     )

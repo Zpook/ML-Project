@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 
 DEVICE = "cuda:0"
-EPOCHS = 10
+EPOCHS = 30
 BATCH = 1000
 PRINT_PREDICTED = False
 
@@ -19,10 +19,10 @@ def main():
     network = MNISTnet()
 
     lossFunc = torch.nn.NLLLoss()
-    optimizer = torch.optim.Adam(network.parameters(),lr = 0.01)
+    optimizer = torch.optim.Adam(network.parameters(),lr = 0.005)
 
     network = network.to(DEVICE)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.95)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.9)
 
 
     for epochIndex in range(EPOCHS):
