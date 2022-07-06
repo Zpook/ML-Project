@@ -36,7 +36,9 @@ def main():
 
         errors += (label != truth).sum()
 
-    print("errors: " + errors.__str__(0))
+    datalen = dataset.__len__()
+    accuracy = (datalen-errors)/datalen
+    print("Accuracy: " + (accuracy*100).__str__() + "%")
 
 
 
