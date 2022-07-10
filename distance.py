@@ -15,8 +15,8 @@ DEVICE = "cuda:0"
 NUM_WORKERS = 12
 BATCH = int(10000 / NUM_WORKERS)
 
-MAP_NORM_ORD = 2
-DIST_NORM_ORD = 2
+MAP_NORM_ORD = 1
+DIST_NORM_ORD = 1
 
 def MapDistances(singleMap, inputs):
     diffs = inputs - singleMap
@@ -27,8 +27,9 @@ def KDistances(doubleMap, inputs1, inputs2):
     dist2 = 0
 
     for map in doubleMap:
-        dist1 += MapDistances(map[0],inputs1)
-        dist2 += MapDistances(map[1],inputs2)
+        
+        dist1 += torch.linalg.norm(inputs1 - map[0],ord=MAP_NORM_ORD,dim=(1,2))
+        dist2 += torch.linalg.norm(inputs2 - map[1],ord=MAP_NORM_ORD,dim=(1,2))
     
     
     return dist1, dist2
