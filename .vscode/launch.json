@@ -19,6 +19,22 @@
             "program": "test.py",
             "console": "integratedTerminal",
             "justMyCode": true
+        },
+        {
+            "name": "KNN select",
+            "type": "python",
+            "request": "launch",
+            "program": "KNNSelect.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+        {
+            "name": "Distances",
+            "type": "python",
+            "request": "launch",
+            "program": "distance.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
         }
     ]
 }

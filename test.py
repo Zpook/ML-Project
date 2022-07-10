@@ -6,7 +6,9 @@ from tqdm import tqdm
 
 
 DEVICE = "cuda:0"
-BATCH = 1000
+NUM_WORKERS = 12
+BATCH = int(60000 / NUM_WORKERS)
+
 
 def main():
 
@@ -16,12 +18,13 @@ def main():
 
     dataset = torchvision.datasets.MNIST("./dataset/", train=False, download=True, transform=transforms)
     dataLoader = torch.utils.data.DataLoader(
-        dataset, batch_size=BATCH, shuffle=True, num_workers=2
+        dataset, batch_size=BATCH, shuffle=True, num_workers=NUM_WORKERS
     )
     network = MNISTnet()
 
     stateDict = torch.load("./model.pt")
     network = network.to(DEVICE)
+    network.eval()
     network.load_state_dict(stateDict,strict=True)
 
     errors = 0
