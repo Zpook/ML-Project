@@ -1,5 +1,7 @@
 import torch
 import torchvision
+import torchmetrics
+import numpy as np
 from torchvision import transforms as ttrans
 from nnmodel import MNISTnet
 from tqdm import tqdm
@@ -10,6 +12,8 @@ SHOW_MAPS_NUMBER = 10
 
 SHOW_DISTANCES = False
 SHOW_DISTANCES_NUMBER = 0
+
+SHOW_CUNFUSION = False
 
 DEVICE = "cuda:0"
 NUM_WORKERS = 12
@@ -74,6 +78,12 @@ def main():
 
     mapDict = {0:{},1:{},2:{},3:{},4:{},5:{},6:{},7:{},8:{},9:{}}
 
+    AllCNNLabels = torch.tensor([]).to(DEVICE)
+    AllKNNLabels = torch.tensor([]).to(DEVICE)
+    AllTrueLabels = torch.tensor([]).to(DEVICE)
+
+    confusionMatCalc = torchmetrics.ConfusionMatrix(10).to(DEVICE)
+
     CNNErrors = 0
     KNNErrors = 0
     for batchIndex, (input, truth) in tqdm(enumerate(dataLoader)):
@@ -88,6 +98,10 @@ def main():
         CNNLabels = out.argmax(dim=1)
         KNNLabels = KClassif(KNNMaps,mapsTorch.cpu().detach()).to(DEVICE)
 
+        AllCNNLabels = torch.cat([AllCNNLabels,CNNLabels])
+        AllKNNLabels = torch.cat([AllKNNLabels,KNNLabels])
+        AllTrueLabels = torch.cat([AllTrueLabels,truth])
+
         CNNErrors += (CNNLabels != truth).sum().cpu()
         KNNErrors += (KNNLabels != truth).sum().cpu()
 
@@ -100,15 +114,36 @@ def main():
 
             mapDict[int(truth[index])][score] = map
 
-    # for key in mapDict.keys():
-    #     mapDict[key] = {k: mapDict[key][k] for k in sorted(mapDict[key],reverse=True)}
-
     datalen = dataset.__len__()
     CNNAccuracy = (datalen-CNNErrors)/datalen
     KNNAccuracy = (datalen-KNNErrors)/datalen
 
+
+
     print("CNN Accuracy: " + (CNNAccuracy*100).__str__() + "%")
     print("KNN Accuracy: " + (KNNAccuracy*100).__str__() + "%")
+
+
+    if SHOW_CUNFUSION:
+        
+        CNNConfuseMatrix = confusionMatCalc(AllCNNLabels.to(torch.int),AllTrueLabels.to(torch.int))
+        KNNConfuseMatrix = confusionMatCalc(AllKNNLabels.to(torch.int),AllTrueLabels.to(torch.int))
+
+        fig, ax = plt.subplots(nrows=2)
+
+        plt.xticks(np.arange(0, 10, 1))
+        ax[0].imshow(CNNConfuseMatrix.cpu().numpy())
+        ax[0].set_title("CNN")
+        ax[0].set_xticks(np.arange(0, 10, 1))
+        ax[0].set_yticks(np.arange(0, 10, 1))
+
+        ax[1].imshow(KNNConfuseMatrix.cpu().numpy())
+        ax[1].set_title("KNN")
+        ax[1].set_xticks(np.arange(0, 10, 1))
+        ax[1].set_yticks(np.arange(0, 10, 1))
+
+        plt.show()
+
 
 
     if SHOW_MAPS:

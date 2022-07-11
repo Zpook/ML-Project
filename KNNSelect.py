@@ -1,9 +1,9 @@
 import torch
 import torchvision
 from torchvision import transforms as ttrans
+import numpy as np
 from nnmodel import MNISTnet
 from tqdm import tqdm
-from matplotlib import pyplot as plt
 
 SHOW_MAPS = False
 SHOW_MAPS_NUMBER = 10
@@ -12,7 +12,9 @@ DEVICE = "cuda:0"
 NUM_WORKERS = 12
 BATCH = int(10000 / NUM_WORKERS)
 
-SELECT_K = 30
+SELECT_K = 20
+RANDOM_SELECT = False
+AVERAGE_MAPS = False
 
 
 def MapDistances(map, inputs):
@@ -34,7 +36,7 @@ def main():
 
     dataset = torchvision.datasets.MNIST("./dataset/", train=True, download=True, transform=transforms)
     dataLoader = torch.utils.data.DataLoader(
-        dataset, batch_size=BATCH, shuffle=True, num_workers=NUM_WORKERS
+        dataset, batch_size=BATCH, shuffle=False, num_workers=NUM_WORKERS
     )
     network = MNISTnet()
 
@@ -67,7 +69,22 @@ def main():
 
     for key in mapDict.keys():
         mapDict[key] = {k: mapDict[key][k] for k in sorted(mapDict[key],reverse=True)}
-        finalMap[key] = list(mapDict[key].values())[0:SELECT_K]
+
+        selectionRange = list(mapDict[key].values())
+
+
+        if RANDOM_SELECT:
+            indexes = np.random.choice(selectionRange.__len__(),SELECT_K)
+            selectionRange = np.array(selectionRange)[indexes.astype(int)]
+
+        finalMap[key] = selectionRange[0:SELECT_K]
+
+        if AVERAGE_MAPS:
+            averaged = 0
+            for matrix in finalMap[key]:
+                averaged += matrix
+            finalMap[key] = averaged / finalMap[key].__len__()
+
 
     torch.save(finalMap,"./KNN.pt")
 
