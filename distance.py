@@ -1,32 +1,17 @@
 import torch
 import torchvision
 import torchmetrics
+from skimage.metrics import structural_similarity as ssim
 import numpy as np
 from torchvision import transforms as ttrans
 from nnmodel import MNISTnet
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 
-SHOW_MAPS = False
-SHOW_MAPS_NUMBER = 10
+PSNR_CALC = torchmetrics.PeakSignalNoiseRatio(100)
+SSIM_CALC = ssim
 
-SHOW_DISTANCES = False
-SHOW_DISTANCES_NUMBER = 0
-
-SHOW_CUNFUSION = False
-
-DEVICE = "cuda:0"
-NUM_WORKERS = 12
-BATCH = int(10000 / NUM_WORKERS)
-
-MAP_NORM_ORD = 1
-DIST_NORM_ORD = 1
-
-def MapDistances(singleMap, inputs):
-    diffs = inputs - singleMap
-    return torch.linalg.norm(diffs,ord=MAP_NORM_ORD,dim=(1,2))
-
-def KDistances(doubleMap, inputs1, inputs2):
+def NormDistance(doubleMap, inputs1, inputs2):
     dist1 = 0
     dist2 = 0
 
@@ -38,7 +23,37 @@ def KDistances(doubleMap, inputs1, inputs2):
     
     return dist1, dist2
 
-def KClassif(allMaps,inputs):
+def PSNRDistance(doubleMap, inputs1, inputs2):
+    dist1 = torch.zeros(inputs1.shape[0])
+    dist2 = torch.zeros(inputs1.shape[0])
+
+    doubleMap = torch.tensor(doubleMap)
+    for map in doubleMap:
+        for index in range(inputs1.shape[0]):
+            iterIn1 = inputs1[index]
+            iterIn2 = inputs2[index]
+
+            dist1[index] += PSNR_CALC(iterIn1,map[0])
+            dist2[index] += PSNR_CALC(iterIn2,map[1])
+    
+    return dist1, dist2
+
+def SSIMDistance(doubleMap, inputs1, inputs2):
+    dist1 = torch.zeros(inputs1.shape[0])
+    dist2 = torch.zeros(inputs1.shape[0])
+
+    doubleMap = torch.tensor(doubleMap)
+    for map in doubleMap:
+        for index in range(inputs1.shape[0]):
+            iterIn1 = inputs1[index]
+            iterIn2 = inputs2[index]
+
+            dist1[index] += SSIM_CALC(iterIn1,map[0])
+            dist2[index] += SSIM_CALC(iterIn2,map[1])
+    
+    return dist1, dist2
+
+def KClassif(allMaps,inputs, distFunc):
     inputs1 = inputs[:,0,:,:]
     inputs2 = inputs[:,1,:,:]
 
@@ -46,9 +61,9 @@ def KClassif(allMaps,inputs):
 
     for number, doubleMap in allMaps.items():
 
-        dist1,dist2 = KDistances(doubleMap,inputs1,inputs2)
+        dist1,dist2 = distFunc(doubleMap,inputs1,inputs2)
         curDistances = torch.stack((dist1,dist2))
-        curDistances = torch.linalg.norm(curDistances,ord=DIST_NORM_ORD,dim=(0))
+        curDistances = torch.linalg.norm(curDistances,ord=KNN_NORM,dim=(0))
 
         distances.append(curDistances)
 
@@ -56,6 +71,30 @@ def KClassif(allMaps,inputs):
     classifications = torch.argmin(distances,dim=1)
 
     return classifications
+
+
+
+
+DEVICE = "cuda:0"
+NUM_WORKERS = 12
+BATCH = int(10000 / NUM_WORKERS)
+
+MAP_NORM_ORD = 1
+KNN_NORM = 1
+
+MAP_DIST_FUNC = NormDistance
+CALC_MAPDICT = False
+
+
+SHOW_MAPS = True
+SHOW_MAPS_NUMBER = 10
+
+SHOW_DISTANCES = False
+SHOW_DISTANCES_NUMBER = 0
+
+SHOW_CUNFUSION = False
+
+
 
 def main():
 
@@ -78,6 +117,9 @@ def main():
 
     mapDict = {0:{},1:{},2:{},3:{},4:{},5:{},6:{},7:{},8:{},9:{}}
 
+    allMaps = []
+    allInputs = []
+
     AllCNNLabels = torch.tensor([]).to(DEVICE)
     AllKNNLabels = torch.tensor([]).to(DEVICE)
     AllTrueLabels = torch.tensor([]).to(DEVICE)
@@ -92,11 +134,15 @@ def main():
         truth = truth.to(DEVICE)
 
         out, mapsTorch = network.forward(input,returnMaps=True)
+
+        allMaps.append(mapsTorch)
+        allInputs.append(input)
+
         maps = mapsTorch.cpu().detach().numpy()
         scores = out.cpu().detach().numpy()
 
         CNNLabels = out.argmax(dim=1)
-        KNNLabels = KClassif(KNNMaps,mapsTorch.cpu().detach()).to(DEVICE)
+        KNNLabels = KClassif(KNNMaps,mapsTorch.cpu().detach(), MAP_DIST_FUNC).to(DEVICE)
 
         AllCNNLabels = torch.cat([AllCNNLabels,CNNLabels])
         AllKNNLabels = torch.cat([AllKNNLabels,KNNLabels])
@@ -105,14 +151,15 @@ def main():
         CNNErrors += (CNNLabels != truth).sum().cpu()
         KNNErrors += (KNNLabels != truth).sum().cpu()
 
-        for index in range(maps.shape[0]):
-            
-            map = maps[index]
-            score = scores[index]
+        if CALC_MAPDICT:
+            for index in range(maps.shape[0]):
+                
+                map = maps[index]
+                score = scores[index]
 
-            score = score[score.argmax()]
+                score = score[score.argmax()]
 
-            mapDict[int(truth[index])][score] = map
+                mapDict[int(truth[index])][score] = map
 
     datalen = dataset.__len__()
     CNNAccuracy = (datalen-CNNErrors)/datalen
@@ -123,6 +170,9 @@ def main():
     print("CNN Accuracy: " + (CNNAccuracy*100).__str__() + "%")
     print("KNN Accuracy: " + (KNNAccuracy*100).__str__() + "%")
 
+
+    allMaps = torch.cat(allMaps)
+    allInputs = torch.cat(allInputs)
 
     if SHOW_CUNFUSION:
         
@@ -149,19 +199,13 @@ def main():
     if SHOW_MAPS:
         for index in range(SHOW_MAPS_NUMBER):
             
-            fig, ax = plt.subplots(nrows=2,ncols=3)
+            fig, ax = plt.subplots(nrows=2,ncols=10)
 
-            ax[0][0].imshow(list(mapDict[0].values())[index][0])
-            ax[0][0].set_title(0)
-            ax[1][0].imshow(list(mapDict[0].values())[index][1])
+            for index2 in range(10):
 
-            ax[0][1].imshow(list(mapDict[1].values())[index][0])
-            ax[0][1].set_title(1)
-            ax[1][1].imshow(list(mapDict[1].values())[index][1])
-
-            ax[0][2].imshow(list(mapDict[2].values())[index][0])
-            ax[0][2].set_title(2)
-            ax[1][2].imshow(list(mapDict[2].values())[index][1])
+                ax[0][index2].imshow(list(mapDict[index2].values())[index][0])
+                ax[0][index2].set_title(index2)
+                ax[1][index2].imshow(list(mapDict[index2].values())[index][1])
 
             plt.show()
     
@@ -179,14 +223,14 @@ def main():
         inputs1 = torch.tensor(allPoints)[:,0,:,:]
         inputs2 = torch.tensor(allPoints)[:,1,:,:]
 
-        distances1, distances2 = KDistances(KNNMap,inputs1, inputs2)
+        distances1, distances2 = NormDistance(KNNMap,inputs1, inputs2)
 
         plt.scatter(distances1,distances2,c="red")
 
         inputs1 = torch.tensor(list(mapDict[0].values()))[:,0,:,:]
         inputs2 = torch.tensor(list(mapDict[0].values()))[:,1,:,:]
 
-        distances1, distances2 = KDistances(KNNMap,inputs1, inputs2)
+        distances1, distances2 = NormDistance(KNNMap,inputs1, inputs2)
 
         plt.scatter(distances1,distances2,c="green")
 
