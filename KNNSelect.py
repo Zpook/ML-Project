@@ -30,9 +30,7 @@ def KNN(maps, inputs):
 
 def main():
 
-    transforms = torchvision.transforms.Compose(
-        [ttrans.ToTensor(), ttrans.Normalize((0.1307), (0.3081))]
-    )
+    transforms = ttrans.ToTensor()
 
     dataset = torchvision.datasets.MNIST("./dataset/", train=True, download=True, transform=transforms)
     dataLoader = torch.utils.data.DataLoader(

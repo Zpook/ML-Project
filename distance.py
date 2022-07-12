@@ -87,7 +87,7 @@ CALC_MAPDICT = False
 
 
 SHOW_MAPS = True
-SHOW_MAPS_NUMBER = 10
+SHOW_MAPS_COUNT = 10
 
 SHOW_DISTANCES = False
 SHOW_DISTANCES_NUMBER = 0
@@ -98,9 +98,7 @@ SHOW_CUNFUSION = False
 
 def main():
 
-    transforms = torchvision.transforms.Compose(
-        [ttrans.ToTensor(), ttrans.Normalize((0.1307), (0.3081))]
-    )
+    transforms = ttrans.ToTensor()
 
     dataset = torchvision.datasets.MNIST("./dataset/", train=False, download=True, transform=transforms)
     dataLoader = torch.utils.data.DataLoader(
@@ -166,7 +164,6 @@ def main():
     KNNAccuracy = (datalen-KNNErrors)/datalen
 
 
-
     print("CNN Accuracy: " + (CNNAccuracy*100).__str__() + "%")
     print("KNN Accuracy: " + (KNNAccuracy*100).__str__() + "%")
 
@@ -197,15 +194,16 @@ def main():
 
 
     if SHOW_MAPS:
-        for index in range(SHOW_MAPS_NUMBER):
+        for index in range(SHOW_MAPS_COUNT):
             
-            fig, ax = plt.subplots(nrows=2,ncols=10)
+            fig, ax = plt.subplots(nrows=3,ncols=10)
 
             for index2 in range(10):
 
-                ax[0][index2].imshow(list(mapDict[index2].values())[index][0])
+                ax[0][index2].imshow(allInputs[index].cpu().numpy()[0])
                 ax[0][index2].set_title(index2)
-                ax[1][index2].imshow(list(mapDict[index2].values())[index][1])
+                ax[1][index2].imshow(allMaps[index][0])
+                ax[2][index2].imshow(allMaps[index][1])
 
             plt.show()
     
