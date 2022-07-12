@@ -7,14 +7,14 @@ import numpy as np
 
 DEVICE = "cuda:0"
 EPOCHS = 30
-NUM_WORKERS = 12
+NUM_WORKERS = 10
 BATCH = int(60000 / NUM_WORKERS)
 
 def main():
 
     dataset = torchvision.datasets.MNIST("./dataset/", train=True, download=True, transform=ttrans.ToTensor())
     dataLoader = torch.utils.data.DataLoader(
-        dataset, batch_size=BATCH, shuffle=True, num_workers=10
+        dataset, batch_size=BATCH, shuffle=True, num_workers=NUM_WORKERS
     )
     network = MNISTnet()
 

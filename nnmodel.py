@@ -10,12 +10,12 @@ LINEAR_INIT_STD = 0.1
 class MNISTnet(nn.Module):
     def __init__(self):
         super(MNISTnet, self).__init__()
-        self.conv1 = nn.Conv2d(1, 16, 7)
-        self.conv2 = nn.Conv2d(16, 32, 5)
-        self.conv3 = nn.Conv2d(32, 16, 3)
-        self.conv4 = nn.Conv2d(16, 8, 3)
-        self.conv5 = nn.Conv2d(8, 4, 3)
-        self.conv6 = nn.Conv2d(4, 2, 3)
+        self.conv1 = nn.Conv2d(1, 32, 7)
+        self.conv2 = nn.Conv2d(32, 64, 5)
+        self.conv3 = nn.Conv2d(64, 128, 3)
+        self.conv4 = nn.Conv2d(128, 32, 3)
+        self.conv5 = nn.Conv2d(32, 8, 3)
+        self.conv6 = nn.Conv2d(8, 2, 3)
 
 
         self.fc1 = nn.Linear(200, 128)

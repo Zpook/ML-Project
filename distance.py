@@ -90,9 +90,12 @@ SHOW_MAPS = True
 SHOW_MAPS_COUNT = 10
 
 SHOW_DISTANCES = False
-SHOW_DISTANCES_NUMBER = 0
+SHOW_DISTANCES_NUMBER = 2
 
 SHOW_CUNFUSION = False
+
+if SHOW_MAPS:
+    CALC_MAPDICT = True
 
 
 
@@ -154,10 +157,11 @@ def main():
                 
                 map = maps[index]
                 score = scores[index]
+                iterInput = input[index][0].cpu().numpy()
 
                 score = score[score.argmax()]
 
-                mapDict[int(truth[index])][score] = map
+                mapDict[int(truth[index])][score] = [iterInput,map]
 
     datalen = dataset.__len__()
     CNNAccuracy = (datalen-CNNErrors)/datalen
@@ -200,10 +204,10 @@ def main():
 
             for index2 in range(10):
 
-                ax[0][index2].imshow(allInputs[index].cpu().numpy()[0])
+                ax[0][index2].imshow(list(mapDict[index2].values())[index][0])
                 ax[0][index2].set_title(index2)
-                ax[1][index2].imshow(allMaps[index][0])
-                ax[2][index2].imshow(allMaps[index][1])
+                ax[1][index2].imshow(list(mapDict[index2].values())[index][1][0])
+                ax[2][index2].imshow(list(mapDict[index2].values())[index][1][1])
 
             plt.show()
     
@@ -213,20 +217,16 @@ def main():
         plt.figure()
 
         KNNMap = KNNMaps[SHOW_DISTANCES_NUMBER]
-        
-        allPoints = []
-        for key in mapDict.keys():
-            allPoints.extend(list(mapDict[key].values()))
 
-        inputs1 = torch.tensor(allPoints)[:,0,:,:]
-        inputs2 = torch.tensor(allPoints)[:,1,:,:]
+        inputs1 = torch.tensor(allMaps)[:,0,:,:].cpu()
+        inputs2 = torch.tensor(allMaps)[:,1,:,:].cpu()
 
         distances1, distances2 = NormDistance(KNNMap,inputs1, inputs2)
 
         plt.scatter(distances1,distances2,c="red")
 
-        inputs1 = torch.tensor(list(mapDict[0].values()))[:,0,:,:]
-        inputs2 = torch.tensor(list(mapDict[0].values()))[:,1,:,:]
+        inputs1 = torch.tensor(KNNMap)[:,0,:,:].cpu()
+        inputs2 = torch.tensor(KNNMap)[:,1,:,:].cpu()
 
         distances1, distances2 = NormDistance(KNNMap,inputs1, inputs2)
 
