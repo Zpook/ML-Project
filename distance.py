@@ -136,7 +136,7 @@ def main():
 
         out, mapsTorch = network.forward(input,returnMaps=True)
 
-        allMaps.append(mapsTorch)
+        allMaps.append(mapsTorch.cpu())
         allInputs.append(input)
 
         maps = mapsTorch.cpu().detach().numpy()

@@ -17,9 +17,8 @@ class MNISTnet(nn.Module):
         self.conv5 = nn.Conv2d(32, 8, 3)
         self.conv6 = nn.Conv2d(8, 2, 3)
 
-
-        self.fc1 = nn.Linear(200, 128)
-        self.fc2 = nn.Linear(128, 10)
+        self.fc1 = nn.Linear(200, 64)
+        self.fc2 = nn.Linear(64, 10)
 
     def Initalize(self):
         for module in self.modules():
