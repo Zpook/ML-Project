@@ -12,7 +12,7 @@ DEVICE = "cuda:0"
 NUM_WORKERS = 12
 BATCH = int(10000 / NUM_WORKERS)
 
-SELECT_K = 50
+SELECT_FEATURES = 50
 RANDOM_SELECT = False
 AVERAGE_MAPS = False
 
@@ -21,12 +21,6 @@ def MapDistances(map, inputs):
     diffs = inputs - map
     return torch.linalg.norm(diffs,ord=2,dim=(1,2))
 
-def KNN(maps, inputs):
-    dist = 0
-    for map in maps:
-        dist += MapDistances(map,inputs)
-    
-    return dist / maps.__len__()
 
 def main():
 
@@ -72,10 +66,10 @@ def main():
 
 
         if RANDOM_SELECT:
-            indexes = np.random.choice(selectionRange.__len__(),SELECT_K)
+            indexes = np.random.choice(selectionRange.__len__(),SELECT_FEATURES)
             selectionRange = np.array(selectionRange)[indexes.astype(int)]
 
-        finalMap[key] = selectionRange[0:SELECT_K]
+        finalMap[key] = selectionRange[0:SELECT_FEATURES]
 
         if AVERAGE_MAPS:
             averaged = 0
@@ -84,7 +78,7 @@ def main():
             finalMap[key] = averaged / finalMap[key].__len__()
 
 
-    torch.save(finalMap,"./KNN.pt")
+    torch.save(finalMap,"./Features.pt")
 
 
 

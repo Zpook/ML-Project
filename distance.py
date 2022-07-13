@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import torch
 import torchvision
 import torchmetrics
@@ -11,15 +13,58 @@ from matplotlib import pyplot as plt
 PSNR_CALC = torchmetrics.PeakSignalNoiseRatio(100)
 SSIM_CALC = ssim
 
-def NormDistance(doubleMap, inputs1, inputs2):
+def unravel_index(
+    indices: torch.LongTensor,
+    shape: Tuple[int, ...],
+) -> torch.LongTensor:
+    r"""Converts flat indices into unraveled coordinates in a target shape.
+
+    This is a `torch` implementation of `numpy.unravel_index`.
+
+    Args:
+        indices: A tensor of (flat) indices, (*, N).
+        shape: The targeted shape, (D,).
+
+    Returns:
+        The unraveled coordinates, (*, N, D).
+    """
+
+    coord = []
+
+    for dim in reversed(shape):
+        coord.append(indices % dim)
+        indices = indices // dim
+
+    coord = torch.stack(coord[::-1], dim=-1)
+
+    return coord
+
+def KMeans(doubleMap, inputs1, inputs2):
     dist1 = 0
     dist2 = 0
 
     for map in doubleMap:
         
-        dist1 += torch.linalg.norm(inputs1 - map[0],ord=MAP_NORM_ORD,dim=(1,2))
-        dist2 += torch.linalg.norm(inputs2 - map[1],ord=MAP_NORM_ORD,dim=(1,2))
+        dist1 += torch.linalg.norm(inputs1 - map[0],ord=FEATURE_NORM,dim=(1,2))
+        dist2 += torch.linalg.norm(inputs2 - map[1],ord=FEATURE_NORM,dim=(1,2))
     
+    
+    return dist1, dist2
+
+def KNN(doubleMap, inputs1, inputs2):
+    dist1 = []
+    dist2 = []
+
+    for map in doubleMap:
+        
+        tempDist1 = torch.linalg.norm(inputs1 - map[0],ord=FEATURE_NORM,dim=(1,2))
+        tempDist2 = torch.linalg.norm(inputs2 - map[1],ord=FEATURE_NORM,dim=(1,2))
+
+        dist1.append(tempDist1)
+        dist2.append(tempDist2)
+
+    dist1 = torch.stack(dist1)
+    dist2 = torch.stack(dist2)
     
     return dist1, dist2
 
@@ -53,7 +98,7 @@ def SSIMDistance(doubleMap, inputs1, inputs2):
     
     return dist1, dist2
 
-def KClassif(allMaps,inputs, distFunc):
+def KMeansClassif(allMaps,inputs):
     inputs1 = inputs[:,0,:,:]
     inputs2 = inputs[:,1,:,:]
 
@@ -61,9 +106,9 @@ def KClassif(allMaps,inputs, distFunc):
 
     for number, doubleMap in allMaps.items():
 
-        dist1,dist2 = distFunc(doubleMap,inputs1,inputs2)
+        dist1,dist2 = KMeans(doubleMap,inputs1,inputs2)
         curDistances = torch.stack((dist1,dist2))
-        curDistances = torch.linalg.norm(curDistances,ord=KNN_NORM,dim=(0))
+        curDistances = torch.linalg.norm(curDistances,ord=DISTANCE_NORM,dim=(0))
 
         distances.append(curDistances)
 
@@ -72,19 +117,45 @@ def KClassif(allMaps,inputs, distFunc):
 
     return classifications
 
+def KNNClassif(allMaps,inputs):
+    inputs1 = inputs[:,0,:,:]
+    inputs2 = inputs[:,1,:,:]
+
+    distances = []
+
+    for number, doubleMap in allMaps.items():
+
+        dist1,dist2 = KNN(doubleMap,inputs1,inputs2)
+        curDistances = torch.stack((dist1,dist2))
+        curDistances = torch.linalg.norm(curDistances,ord=DISTANCE_NORM,dim=(0))
+
+        distances.append(curDistances)
+
+    distances = torch.stack(distances,dim=0)
+
+    distances = distances.view(-1,distances.shape[2])
+    top = torch.topk(distances,k=KNN_K,dim=0,largest=False)
+    top = (top.indices / K_MEANS_K).floor()
+
+
+    
+    classifications = torch.mode(top,dim=0).values
+
+    return classifications
 
 
 
 DEVICE = "cuda:0"
 NUM_WORKERS = 12
 BATCH = int(10000 / NUM_WORKERS)
+K_MEANS_K = 50
 
-MAP_NORM_ORD = 1
-KNN_NORM = 1
+FEATURE_NORM = 1
+DISTANCE_NORM = 1
 
-MAP_DIST_FUNC = NormDistance
+CLASSIFIER = KNNClassif
 CALC_MAPDICT = False
-
+KNN_K = 1
 
 SHOW_MAPS = False
 SHOW_MAPS_COUNT = 10
@@ -114,7 +185,7 @@ def main():
     network.eval()
     network.load_state_dict(stateDict,strict=True)
 
-    KNNMaps = torch.load("./KNN.pt")
+    FeatureMaps = torch.load("./Features.pt")
 
     mapDict = {0:{},1:{},2:{},3:{},4:{},5:{},6:{},7:{},8:{},9:{}}
 
@@ -143,7 +214,7 @@ def main():
         scores = out.cpu().detach().numpy()
 
         CNNLabels = out.argmax(dim=1)
-        KNNLabels = KClassif(KNNMaps,mapsTorch.cpu().detach(), MAP_DIST_FUNC).to(DEVICE)
+        KNNLabels = CLASSIFIER(FeatureMaps,mapsTorch.cpu().detach()).to(DEVICE)
 
         AllCNNLabels = torch.cat([AllCNNLabels,CNNLabels])
         AllKNNLabels = torch.cat([AllKNNLabels,KNNLabels])
@@ -225,19 +296,19 @@ def main():
 
         plt.figure()
 
-        KNNMap = KNNMaps[SHOW_DISTANCES_NUMBER]
+        KNNMap = FeatureMaps[SHOW_DISTANCES_NUMBER]
 
         inputs1 = torch.tensor(allMaps)[:,0,:,:].cpu()
         inputs2 = torch.tensor(allMaps)[:,1,:,:].cpu()
 
-        distances1, distances2 = NormDistance(KNNMap,inputs1, inputs2)
+        distances1, distances2 = KMeans(KNNMap,inputs1, inputs2)
 
         plt.scatter(distances1,distances2,c="red")
 
         inputs1 = torch.tensor(KNNMap)[:,0,:,:].cpu()
         inputs2 = torch.tensor(KNNMap)[:,1,:,:].cpu()
 
-        distances1, distances2 = NormDistance(KNNMap,inputs1, inputs2)
+        distances1, distances2 = KMeans(KNNMap,inputs1, inputs2)
 
         plt.scatter(distances1,distances2,c="green")
 
