@@ -242,7 +242,7 @@ def main():
 
 
     print("CNN Accuracy: " + (CNNAccuracy*100).__str__() + "%")
-    print("KNN Accuracy: " + (KNNAccuracy*100).__str__() + "%")
+    print("NN Accuracy: " + (KNNAccuracy*100).__str__() + "%")
 
 
     allMaps = torch.cat(allMaps)
@@ -251,7 +251,7 @@ def main():
     if SHOW_CUNFUSION:
         
         CNNConfuseMatrix = confusionMatCalc(AllCNNLabels.to(torch.int),AllTrueLabels.to(torch.int))
-        KNNConfuseMatrix = confusionMatCalc(AllKNNLabels.to(torch.int),AllTrueLabels.to(torch.int))
+        NNConfuseMatrix = confusionMatCalc(AllKNNLabels.to(torch.int),AllTrueLabels.to(torch.int))
 
         fig, ax = plt.subplots(nrows=2)
 
@@ -261,8 +261,8 @@ def main():
         ax[0].set_xticks(np.arange(0, 10, 1))
         ax[0].set_yticks(np.arange(0, 10, 1))
 
-        ax[1].imshow(KNNConfuseMatrix.cpu().numpy())
-        ax[1].set_title("KNN")
+        ax[1].imshow(NNConfuseMatrix.cpu().numpy())
+        ax[1].set_title("Nearest")
         ax[1].set_xticks(np.arange(0, 10, 1))
         ax[1].set_yticks(np.arange(0, 10, 1))
 
