@@ -86,7 +86,7 @@ MAP_DIST_FUNC = NormDistance
 CALC_MAPDICT = False
 
 
-SHOW_MAPS = True
+SHOW_MAPS = False
 SHOW_MAPS_COUNT = 10
 
 SHOW_DISTANCES = False
