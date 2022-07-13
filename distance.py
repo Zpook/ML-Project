@@ -135,7 +135,7 @@ def KNNClassif(allMaps,inputs):
 
     distances = distances.view(-1,distances.shape[2])
     top = torch.topk(distances,k=KNN_K,dim=0,largest=False)
-    top = (top.indices / K_MEANS_K).floor()
+    top = (top.indices / N_FEATURES).floor()
 
 
     
@@ -144,11 +144,13 @@ def KNNClassif(allMaps,inputs):
     return classifications
 
 
+from FeatureSelect import SELECT_FEATURES
+
 
 DEVICE = "cuda:0"
 NUM_WORKERS = 12
 BATCH = int(10000 / NUM_WORKERS)
-K_MEANS_K = 50
+N_FEATURES = SELECT_FEATURES
 
 FEATURE_NORM = 1
 DISTANCE_NORM = 1
@@ -160,8 +162,8 @@ KNN_K = 1
 SHOW_MAPS = False
 SHOW_MAPS_COUNT = 10
 
-SHOW_DISTANCES = False
-SHOW_DISTANCES_NUMBER = 1
+SHOW_KMEANS_DISTANCES = False
+SHOW_KMEANS_DISTANCES_NUMBER = 1
 
 SHOW_CUNFUSION = False
 
@@ -292,11 +294,11 @@ def main():
             plt.show()
     
 
-    if SHOW_DISTANCES:
+    if SHOW_KMEANS_DISTANCES:
 
         plt.figure()
 
-        KNNMap = FeatureMaps[SHOW_DISTANCES_NUMBER]
+        KNNMap = FeatureMaps[SHOW_KMEANS_DISTANCES_NUMBER]
 
         inputs1 = torch.tensor(allMaps)[:,0,:,:].cpu()
         inputs2 = torch.tensor(allMaps)[:,1,:,:].cpu()
