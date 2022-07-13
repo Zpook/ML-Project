@@ -90,7 +90,7 @@ SHOW_MAPS = True
 SHOW_MAPS_COUNT = 10
 
 SHOW_DISTANCES = False
-SHOW_DISTANCES_NUMBER = 2
+SHOW_DISTANCES_NUMBER = 1
 
 SHOW_CUNFUSION = False
 
@@ -208,6 +208,15 @@ def main():
                 ax[0][index2].set_title(index2)
                 ax[1][index2].imshow(list(mapDict[index2].values())[index][1][0])
                 ax[2][index2].imshow(list(mapDict[index2].values())[index][1][1])
+
+                ax[0][index2].get_xaxis().set_visible(False)
+                ax[0][index2].get_yaxis().set_visible(False)
+
+                ax[1][index2].get_xaxis().set_visible(False)
+                ax[1][index2].get_yaxis().set_visible(False)
+
+                ax[2][index2].get_xaxis().set_visible(False)
+                ax[2][index2].get_yaxis().set_visible(False)
 
             plt.show()
     
