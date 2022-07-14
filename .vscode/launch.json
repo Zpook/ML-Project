@@ -21,10 +21,10 @@
             "justMyCode": true
         },
         {
-            "name": "KNN select",
+            "name": "Feature select",
             "type": "python",
             "request": "launch",
-            "program": "KNNSelect.py",
+            "program": "FeatureSelect.py",
             "console": "integratedTerminal",
             "justMyCode": true
         }
