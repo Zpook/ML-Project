@@ -9,6 +9,8 @@ from torchvision import transforms as ttrans
 from nnmodel import MNISTnet
 from tqdm import tqdm
 from matplotlib import pyplot as plt
+import sklearn.tree
+import pickle
 
 PSNR_CALC = torchmetrics.PeakSignalNoiseRatio(100)
 SSIM_CALC = ssim
@@ -174,6 +176,9 @@ if SHOW_MAPS:
 
 def main():
 
+    treeClassifier : sklearn.tree.DecisionTreeClassifier = pickle.load(open("./tree_classifier.pkl","rb"))
+
+
     transforms = ttrans.ToTensor()
 
     dataset = torchvision.datasets.MNIST("./dataset/", train=False, download=True, transform=transforms)
@@ -196,12 +201,15 @@ def main():
 
     AllCNNLabels = torch.tensor([]).to(DEVICE)
     AllKNNLabels = torch.tensor([]).to(DEVICE)
+    AllTreeLabels = torch.tensor([]).to(DEVICE)
     AllTrueLabels = torch.tensor([]).to(DEVICE)
 
     confusionMatCalc = torchmetrics.ConfusionMatrix(10).to(DEVICE)
 
     CNNErrors = 0
     KNNErrors = 0
+    TreeErrors = 0
+
     for batchIndex, (input, truth) in tqdm(enumerate(dataLoader)):
         
         input = input.to(DEVICE)
@@ -217,13 +225,17 @@ def main():
 
         CNNLabels = out.argmax(dim=1)
         KNNLabels = CLASSIFIER(FeatureMaps,mapsTorch.cpu().detach()).to(DEVICE)
+        treeLabels = torch.tensor(treeClassifier.predict(mapsTorch.cpu().detach().flatten(1))).to(DEVICE)
+
 
         AllCNNLabels = torch.cat([AllCNNLabels,CNNLabels])
         AllKNNLabels = torch.cat([AllKNNLabels,KNNLabels])
+        AllTreeLabels = torch.cat([AllTreeLabels,treeLabels])
         AllTrueLabels = torch.cat([AllTrueLabels,truth])
 
         CNNErrors += (CNNLabels != truth).sum().cpu()
         KNNErrors += (KNNLabels != truth).sum().cpu()
+        TreeErrors += (treeLabels != truth).sum().cpu()
 
         if CALC_MAPDICT:
             for index in range(maps.shape[0]):
@@ -239,11 +251,12 @@ def main():
     datalen = dataset.__len__()
     CNNAccuracy = (datalen-CNNErrors)/datalen
     KNNAccuracy = (datalen-KNNErrors)/datalen
+    TreeAccuracy = (datalen-TreeErrors)/datalen
 
 
     print("CNN Accuracy: " + (CNNAccuracy*100).__str__() + "%")
     print("NN Accuracy: " + (KNNAccuracy*100).__str__() + "%")
-
+    print("Tree Accuracy: " + (TreeAccuracy*100).__str__() + "%")
 
     allMaps = torch.cat(allMaps)
     allInputs = torch.cat(allInputs)

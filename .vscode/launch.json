@@ -27,12 +27,20 @@
             "program": "FeatureSelect.py",
             "console": "integratedTerminal",
             "justMyCode": true
-        }
+        },
         {
             "name": "Distances",
             "type": "python",
             "request": "launch",
             "program": "distance.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Train Tree",
+            "type": "python",
+            "request": "launch",
+            "program": "TrainTreeClassif.py",
             "console": "integratedTerminal",
             "justMyCode": true
         }

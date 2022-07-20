@@ -5,6 +5,7 @@ import numpy as np
 from nnmodel import MNISTnet
 from tqdm import tqdm
 
+
 SHOW_MAPS = False
 SHOW_MAPS_NUMBER = 10
 
@@ -16,7 +17,6 @@ SELECT_FEATURES = 50
 RANDOM_SELECT = False
 AVERAGE_MAPS = False
 
-
 def MapDistances(map, inputs):
     diffs = inputs - map
     return torch.linalg.norm(diffs,ord=2,dim=(1,2))
@@ -25,7 +25,6 @@ def MapDistances(map, inputs):
 def main():
 
     transforms = ttrans.ToTensor()
-
     dataset = torchvision.datasets.MNIST("./dataset/", train=True, download=True, transform=transforms)
     dataLoader = torch.utils.data.DataLoader(
         dataset, batch_size=BATCH, shuffle=False, num_workers=NUM_WORKERS
@@ -43,6 +42,7 @@ def main():
         
         input = input.to(DEVICE)
         truth = truth.to(DEVICE)
+
 
         out, maps = network.forward(input,returnMaps=True)
         maps = maps.cpu().detach().numpy()
