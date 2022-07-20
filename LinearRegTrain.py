@@ -36,7 +36,6 @@ if __name__ == "__main__":
         input = input.to(DEVICE)
         truth = truth.to(DEVICE)
 
-
         out, maps = network.forward(input,returnMaps=True)
 
         maps = maps.cpu().detach()
@@ -44,4 +43,5 @@ if __name__ == "__main__":
 
     
     linearReg.fit(AllMaps.flatten(1),dataset.train_labels)
+    print("Linear score: " + linearReg.score(AllMaps.flatten(1),dataset.train_labels).__str__())
     pickle.dump(linearReg,open("linear_classifier.pkl","wb"))
