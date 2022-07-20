@@ -43,6 +43,14 @@
             "program": "TrainTreeClassif.py",
             "console": "integratedTerminal",
             "justMyCode": true
+        },
+        {
+            "name": "Train Linear",
+            "type": "python",
+            "request": "launch",
+            "program": "LinearRegTrain.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
         }
     ]
 }

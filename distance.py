@@ -189,8 +189,8 @@ def main():
 
     stateDict = torch.load("./model.pt")
     network = network.to(DEVICE)
-    network.eval()
     network.load_state_dict(stateDict,strict=True)
+    network.eval()
 
     FeatureMaps = torch.load("./Features.pt")
 

@@ -3,8 +3,7 @@ import torchvision
 from torchvision import transforms as ttrans
 from nnmodel import MNISTnet
 from tqdm import tqdm
-from FeatureSelect import MapDistances
-import sklearn.tree
+import sklearn.linear_model
 import pickle
 
 DEVICE = "cuda:0"
@@ -15,9 +14,6 @@ if __name__ == "__main__":
 
     transforms = ttrans.ToTensor()
     dataset = torchvision.datasets.MNIST("./dataset/", train=True, download=True, transform=transforms)
-
-
-    treeClassifier = sklearn.tree.DecisionTreeClassifier()
 
     transforms = ttrans.ToTensor()
     dataset = torchvision.datasets.MNIST("./dataset/", train=True, download=True, transform=transforms)
@@ -31,6 +27,8 @@ if __name__ == "__main__":
     network.load_state_dict(stateDict,strict=True)
     network.eval()
 
+    linearReg = sklearn.linear_model.LinearRegression(n_jobs=NUM_WORKERS)
+
     AllMaps = torch.tensor([])
 
     for batchIndex, (input, truth) in tqdm(enumerate(dataLoader)):
@@ -43,9 +41,7 @@ if __name__ == "__main__":
 
         maps = maps.cpu().detach()
         AllMaps = torch.cat([AllMaps,maps])
-        # scores = out.cpu().detach().numpy()
 
-
-    treeClassifier.fit(AllMaps.flatten(1),dataset.train_labels)
-
-    pickle.dump(treeClassifier,open("tree_classifier.pkl","wb"))
+    
+    linearReg.fit(AllMaps.flatten(1),dataset.train_labels)
+    pickle.dump(linearReg,open("linear_classifier.pkl","wb"))
