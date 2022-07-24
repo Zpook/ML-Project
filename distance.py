@@ -172,7 +172,7 @@ SHOW_MAPS_COUNT = 10
 SHOW_KMEANS_DISTANCES = False
 SHOW_KMEANS_DISTANCES_NUMBER = 1
 
-SHOW_CUNFUSION = False
+SHOW_CUNFUSION = True
 
 if SHOW_MAPS:
     CALC_MAPDICT = True
@@ -185,6 +185,9 @@ def main():
     )
     linearClassifier: sklearn.linear_model.LinearRegression = pickle.load(
         open("./linear_classifier.pkl", "rb")
+    )
+    logisticClassifier: sklearn.linear_model.LogisticRegression = pickle.load(
+        open("./logistic_classifier.pkl", "rb")
     )
 
     transforms = ttrans.ToTensor()
@@ -213,6 +216,7 @@ def main():
     AllKNNLabels = torch.tensor([]).to(DEVICE)
     AllTreeLabels = torch.tensor([]).to(DEVICE)
     AllLinearLabels = torch.tensor([]).to(DEVICE)
+    AllLogsiticLabels = torch.tensor([]).to(DEVICE)
     AllTrueLabels = torch.tensor([]).to(DEVICE)
 
     confusionMatCalc = torchmetrics.ConfusionMatrix(10).to(DEVICE)
@@ -221,6 +225,7 @@ def main():
     KNNErrors = 0
     TreeErrors = 0
     LinearErrors = 0
+    LogisticErrors = 0
 
     for batchIndex, (input, truth) in tqdm(enumerate(dataLoader)):
 
@@ -246,20 +251,25 @@ def main():
             .to(DEVICE)
             .round()
         )
-        linearLabels[linearLabels<0] = 0
-        linearLabels[linearLabels>9] = 9
+        linearLabels[linearLabels < 0] = 0
+        linearLabels[linearLabels > 9] = 9
 
+        logisticLabels = torch.tensor(
+            logisticClassifier.predict(mapsTorch.cpu().detach().flatten(1))
+        ).to(torch.int).to(DEVICE)
 
         AllCNNLabels = torch.cat([AllCNNLabels, CNNLabels])
         AllKNNLabels = torch.cat([AllKNNLabels, KNNLabels])
         AllTreeLabels = torch.cat([AllTreeLabels, treeLabels])
         AllLinearLabels = torch.cat([AllLinearLabels, linearLabels])
+        AllLogsiticLabels = torch.cat([AllLogsiticLabels, logisticLabels])
         AllTrueLabels = torch.cat([AllTrueLabels, truth])
 
         CNNErrors += (CNNLabels != truth).sum().cpu()
         KNNErrors += (KNNLabels != truth).sum().cpu()
         TreeErrors += (treeLabels != truth).sum().cpu()
         LinearErrors += (linearLabels != truth).sum().cpu()
+        LogisticErrors += (logisticLabels != truth).sum().cpu()
 
         if CALC_MAPDICT:
             for index in range(maps.shape[0]):
@@ -277,11 +287,13 @@ def main():
     KNNAccuracy = (datalen - KNNErrors) / datalen
     TreeAccuracy = (datalen - TreeErrors) / datalen
     LinearAccuracy = (datalen - LinearErrors) / datalen
+    LogisticAccuracy = (datalen - LogisticErrors) / datalen
 
     print("CNN Accuracy: " + (CNNAccuracy * 100).__str__() + "%")
     print("NN Accuracy: " + (KNNAccuracy * 100).__str__() + "%")
     print("Tree Accuracy: " + (TreeAccuracy * 100).__str__() + "%")
     print("Linear Accuracy: " + (LinearAccuracy * 100).__str__() + "%")
+    print("Logistic Accuracy: " + (LogisticAccuracy * 100).__str__() + "%")
 
     allMaps = torch.cat(allMaps)
     allInputs = torch.cat(allInputs)
@@ -300,8 +312,11 @@ def main():
         LinearConfuseMatrix = confusionMatCalc(
             AllLinearLabels.to(torch.int), AllTrueLabels.to(torch.int)
         )
+        LogisticConfusedMatrix = confusionMatCalc(
+            AllLogsiticLabels.to(torch.int), AllTrueLabels.to(torch.int)
+        )
 
-        fig, ax = plt.subplots(nrows=2,ncols=2)
+        fig, ax = plt.subplots(nrows=3, ncols=2)
 
         plt.xticks(np.arange(0, 10, 1))
         ax[0][0].imshow(CNNConfuseMatrix.cpu().numpy())
@@ -323,6 +338,11 @@ def main():
         ax[1][1].set_title("Linear")
         ax[1][1].set_xticks(np.arange(0, 10, 1))
         ax[1][1].set_yticks(np.arange(0, 10, 1))
+
+        ax[2][0].imshow(LogisticConfusedMatrix.cpu().numpy())
+        ax[2][0].set_title("Logistic")
+        ax[2][0].set_xticks(np.arange(0, 10, 1))
+        ax[2][0].set_yticks(np.arange(0, 10, 1))
 
         plt.show()
 

@@ -51,6 +51,14 @@
             "program": "LinearRegTrain.py",
             "console": "integratedTerminal",
             "justMyCode": true
+        },
+        {
+            "name": "Train Logistic",
+            "type": "python",
+            "request": "launch",
+            "program": "LogisticRegTrain.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
         }
     ]
 }
